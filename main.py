@@ -1,22 +1,87 @@
 from bs4 import BeautifulSoup
+import csv
+import json
+from datetime import datetime
 
-with open('money_data.html', 'r', encoding='utf8') as file:
-    soup = BeautifulSoup(file, 'html.parser')
-    divs = soup.find_all('div', class_='KplRow_innerRow__biA6g')
-    title = "KplRow_title__2WuSO"
-    date_and_balance = "KplRow_subtitle__1LBJx"
-    value = "KplRow_value__1anFU"
-    for div in divs:
-        tran_name = div.find_all('div', class_=title)[0].string
-        tran_date = div.find_all('div', class_=date_and_balance)[0].string
-        tran_value = div.find_all('div', class_=value)[0].string
-        print(f'{tran_name}: {tran_value} - {tran_date}')
-        # spans = div.find_all('span')
-        # for span in spans:
-        #     nested_span = span.find_all('span')
-        #     print(nested_span)
+current_file = 'data/CK_activity.html'
 
-        
+def write_csv(file_path, data):
+    with open(file_path, 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerows(data)
+    print('Written!')
+
+def get_financial_data(file_path):
+    with open(file_path, 'r', encoding='utf8') as file:
+        soup = BeautifulSoup(file, 'html.parser')
+        divs = soup.find_all('div', class_='KplRow_innerRow__biA6g')
+        title = "KplRow_title__2WuSO"
+        date_and_balance = "KplRow_subtitle__1LBJx"
+        value = "KplRow_value__1anFU"
+        all_transactions = [
+            ['Name', 'Amount', 'Date', 'Remaining Balance'],
+        ]
+        for div in divs:
+            # Get string from <div>'s with institution name
+            tran_name = div.find_all('div', class_=title)[0].string
+            
+            # Get string from <div>'s with transaction amount
+            tran_amount = div.find_all('div', class_=value)[0].string
+            
+            # Get string from <div>'s with date and remaining balance
+            tran_date_balance = div.find_all('div', class_=date_and_balance)[0].string
+
+            # Separate date and balance
+            tran_date, remaining_balance = tran_date_balance.split('•')
+
+            # Append year to transaction date
+            date_with_year = f'{tran_date} 2024'
+
+            # Convert to a date object
+            date_object = datetime.strptime(date_with_year, '%b %d %Y').date()
+
+            # Format the date object
+            formatted_date = date_object.strftime('%m/%d/%Y')
+
+            # Create transaction data
+            transaction_data = [
+                tran_name,
+                tran_amount,
+                formatted_date,
+                remaining_balance[1:]
+            ]
+            all_transactions.append(transaction_data)
+        return all_transactions
+
+def group_by_name(list):
+    object = {}
+    for transaction in list[1:]:
+        name = transaction[0]
+    
+    
+if __name__ == '__main__':
+    output_path = 'output/first.csv'
+    # data = get_financial_data(current_file)
+    # write_csv(output_path, data)
+    with open(output_path, 'r') as csv_file:
+        csv = csv.reader(csv_file)
+        data = []
+        for each in csv:
+            if each[0] == 'Name':
+                continue
+            category = input(f'{each[0]} - {each[1]}: ')
+            tran_data = {
+                'name': each[0],
+                'amount': each[1],
+                'date': each[2],
+                'remaining': each[3],
+                'category': category
+            }
+            data.append(tran_data)
+        with open('output/data.json', 'w') as json_file:
+            json_data = json.dumps(data)
+            json_file.write(json_data)
+
     
 
 '''
